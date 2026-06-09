@@ -1,9 +1,10 @@
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-export function PublicLayout() {
+export function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
@@ -25,9 +26,7 @@ export function PublicLayout() {
           </div>
         </div>
       </header>
-      <main className="flex-1">
-        <Outlet />
-      </main>
+      <main className="flex-1">{children}</main>
       <footer className="border-t bg-background px-4 py-6 md:px-6">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 text-xs text-muted-foreground md:flex-row">
           <span>© {new Date().getFullYear()} AprovaAI</span>
