@@ -1,5 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, User, Settings, Sparkles } from "lucide-react";
+import {
+  LayoutDashboard,
+  Sparkles,
+  ShieldCheck,
+  MessagesSquare,
+  FileText,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,15 +17,28 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { usePermissions } from "@/hooks/use-permissions";
 
-const items = [
+const baseItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Perfil", url: "/dashboard", icon: User },
-  { title: "Configurações", url: "/dashboard", icon: Settings },
 ];
+
+type Item = { title: string; url: string; icon: typeof LayoutDashboard };
 
 export function AppSidebar() {
   const currentPath = useRouterState({ select: (s) => s.location.pathname });
+  const rbac = usePermissions();
+
+  const items: Item[] = [...baseItems];
+  if (rbac.hasPermission("conteudo.criar")) {
+    items.push({ title: "Conteúdo", url: "/conteudo", icon: FileText });
+  }
+  if (rbac.hasPermission("comentarios.moderar")) {
+    items.push({ title: "Moderação", url: "/moderacao", icon: MessagesSquare });
+  }
+  if (rbac.hasMinLevel(50)) {
+    items.push({ title: "Administração", url: "/admin", icon: ShieldCheck });
+  }
 
   return (
     <Sidebar collapsible="icon">
@@ -39,7 +58,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild isActive={currentPath === item.url}>
                     <Link to={item.url}>
                       <item.icon className="h-4 w-4" />
