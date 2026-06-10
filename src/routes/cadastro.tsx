@@ -57,7 +57,7 @@ function CadastroPage() {
 
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
-    const { error } = await supabase.auth.signUp({
+    const { data: result, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.senha,
       options: {
@@ -70,9 +70,17 @@ function CadastroPage() {
       toast.error(traduzirErroAuth(error.message));
       return;
     }
-    toast.success("Conta criada! Verifique seu e-mail caso a confirmação esteja ativada.");
+    if (!result.session) {
+      toast.success(
+        "Conta criada! Enviamos um e-mail de confirmação. Verifique sua caixa de entrada antes de entrar.",
+      );
+      navigate({ to: "/login", replace: true });
+      return;
+    }
+    toast.success("Conta criada com sucesso! Bem-vindo ao AprovaAI.");
     navigate({ to: "/dashboard", replace: true });
   };
+
 
   const handleGoogle = async () => {
     setGoogleLoading(true);
