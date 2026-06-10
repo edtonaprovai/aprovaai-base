@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      permissions: {
+        Row: {
+          categoria: string
+          created_at: string
+          descricao: string
+          id: string
+          slug: string
+        }
+        Insert: {
+          categoria: string
+          created_at?: string
+          descricao: string
+          id?: string
+          slug: string
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          descricao?: string
+          id?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -44,6 +68,63 @@ export type Database = {
         }
         Relationships: []
       }
+      role_permissions: {
+        Row: {
+          created_at: string
+          permission_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string
+          permission_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string
+          permission_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_fkey"
+            columns: ["role"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          created_at: string
+          descricao: string
+          nivel: number
+          nome: string
+          slug: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          nivel: number
+          nome: string
+          slug: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          nivel?: number
+          nome?: string
+          slug?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -70,6 +151,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_min_role_level: {
+        Args: { _min_level: number; _user_id: string }
+        Returns: boolean
+      }
+      has_permission: {
+        Args: { _permission: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
