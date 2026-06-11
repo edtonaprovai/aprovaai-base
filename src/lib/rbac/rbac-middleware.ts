@@ -2,19 +2,51 @@ import { createMiddleware } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
+ * Carrega os papéis do usuário autenticado (com nível) e o conjunto de
+ * permissões agregadas. Usa o cliente Supabase autenticado do usuário, com
+ * RLS aplicada — não depende de funções SECURITY DEFINER expostas via RPC.
+ */
+async function carregarRbac(supabase: any, userId: string) {
+  const { data: urs, error: urErr } = await supabase
+    .from("user_roles")
+    .select("role, roles(slug, nivel)")
+    .eq("user_id", userId);
+  if (urErr) throw new Error("Falha ao verificar acesso.");
+
+  const roles: string[] = (urs ?? []).map((r: any) => r.role);
+  const maxLevel: number = (urs ?? []).reduce(
+    (acc: number, r: any) => Math.max(acc, r.roles?.nivel ?? 0),
+    0,
+  );
+
+  let permissions: string[] = [];
+  if (roles.length > 0) {
+    const { data: rp, error: rpErr } = await supabase
+      .from("role_permissions")
+      .select("permissions(slug)")
+      .in("role", roles as any);
+    if (rpErr) throw new Error("Falha ao verificar permissões.");
+    permissions = Array.from(
+      new Set((rp ?? []).map((row: any) => row.permissions?.slug).filter(Boolean)),
+    );
+  }
+
+  return { roles, permissions, maxLevel };
+}
+
+/**
  * Exige que o usuário autenticado possua a permissão informada.
- * Uso: `.middleware([requirePermission("conteudo.criar")])`
  */
 export function requirePermission(permission: string) {
   return createMiddleware({ type: "function" })
     .middleware([requireSupabaseAuth])
     .server(async ({ next, context }) => {
-      const { data, error } = await context.supabase.rpc("has_permission", {
-        _user_id: context.userId,
-        _permission: permission,
-      });
-      if (error) throw new Error("Falha ao verificar permissão.");
-      if (!data) throw new Error(`Acesso negado: requer permissão "${permission}".`);
+      const { permissions } = await carregarRbac(context.supabase, context.userId);
+      const allowed =
+        permissions.includes(permission) || permissions.includes("sistema.administrar");
+      if (!allowed) {
+        throw new Error(`Acesso negado: requer permissão "${permission}".`);
+      }
       return next({ context });
     });
 }
@@ -47,12 +79,14 @@ export function requireMinLevel(level: number) {
   return createMiddleware({ type: "function" })
     .middleware([requireSupabaseAuth])
     .server(async ({ next, context }) => {
-      const { data, error } = await context.supabase.rpc("has_min_role_level", {
-        _user_id: context.userId,
-        _min_level: level,
-      });
-      if (error) throw new Error("Falha ao verificar nível de acesso.");
-      if (!data) throw new Error(`Acesso negado: requer nível mínimo ${level}.`);
+      const { maxLevel, permissions } = await carregarRbac(
+        context.supabase,
+        context.userId,
+      );
+      const allowed = maxLevel >= level || permissions.includes("sistema.administrar");
+      if (!allowed) {
+        throw new Error(`Acesso negado: requer nível mínimo ${level}.`);
+      }
       return next({ context });
     });
 }
